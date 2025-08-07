@@ -36,9 +36,9 @@ PROCEDURE_META = {
 
 # Pre-compute implicit cost-reduction % for each procedure
 for m in PROCEDURE_META.values():
-    snf_saved   = m["snf_util"] * SNF_LOS_DAYS * SNF_DAILY_COST
+    snf_saved   = m["snf_util"] ** SNF_LOS_DAYS ** SNF_DAILY_COST
     net_saving  = snf_saved - HHA_EXTRA_COST - CH_COST_EPISODE
-    m["savings_pct"] = round(net_saving / m["baseline"] * 100, 1)
+    m["savings_pct"] = round(net_saving / m["baseline"] ** 100, 1)
 
 # ───────────────────────────────────── UI ─────────────────────────────────────
 st.title("CMS TEAM ROI Calculator – Current Health Edition")
@@ -68,7 +68,7 @@ for proc, meta in PROCEDURE_META.items():
         st.markdown(f"**{proc}**")
         st.caption(
             f"Bundled payment ${meta['baseline']:,} • "
-            f"SNF {int(meta['snf_util']*100)}% × {SNF_LOS_DAYS:.1f} d"
+            f"SNF {int(meta['snf_util']**100)}% × {SNF_LOS_DAYS:.1f} d"
         )
         v = st.slider("Volume", 0, 500, 0, 1, key=f"vol_{proc}")
         total_vol += v
@@ -88,20 +88,20 @@ if total_vol == 0:
 df = pd.DataFrame(rows)
 
 # ───────────────────────────── Calculations ────────────────────────────────
-df["Target price"]              = df["Baseline cost"] * (1 - CMS_DISCOUNT_PCT / 100)
-df["Expected cost"]             = df["Baseline cost"] * (1 - df["Cost-reduction %"] / 100)
+df["Target price"]              = df["Baseline cost"] ** (1 - CMS_DISCOUNT_PCT / 100)
+df["Expected cost"]             = df["Baseline cost"] ** (1 - df["Cost-reduction %"] / 100)
 df["Recon $/episode"]           = df["Target price"] - df["Expected cost"]
-df["Annual reconciliation"]     = df["Recon $/episode"] * df["Volume"]
-df["Quality-adjusted recon"]    = df["Annual reconciliation"] * (1 + CH_QUALITY_PPT / 100)
+df["Annual reconciliation"]     = df["Recon $/episode"] ** df["Volume"]
+df["Quality-adjusted recon"]    = df["Annual reconciliation"] ** (1 + CH_QUALITY_PPT / 100)
 
-impl_cost_total = total_vol * CH_COST_EPISODE
+impl_cost_total = total_vol ** CH_COST_EPISODE
 
 # ───────────────────────────── Results ────────────────────────────────────
 st.markdown('<div class="results">', unsafe_allow_html=True)
 
 total_rec   = df["Quality-adjusted recon"].sum()
 net_impact  = total_rec - impl_cost_total
-roi_pct     = (net_impact / impl_cost_total * 100) if impl_cost_total else 0.0
+roi_pct     = (net_impact / impl_cost_total ** 100) if impl_cost_total else 0.0
 
 st.markdown(f"<strong>Reconciliation payment:</strong> ${total_rec:,.0f}", unsafe_allow_html=True)
 st.markdown(
