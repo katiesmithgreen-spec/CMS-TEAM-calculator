@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-    st.set_page_config(page_title="CMS TEAM ROI Calculator", layout="centered")
+st.set_page_config(page_title="CMS TEAM ROI Calculator", layout="centered")
 
-    st.title("CMS TEAM Model ROI Calculator (2026–2030)")
+st.title("CMS TEAM Model ROI Calculator (2026–2030)")
 
-    st.markdown(
+st.markdown(
         """
 This interactive tool helps hospitals estimate the *financial return on investment (ROI)* from participating in the **Centers for Medicare & Medicaid Services (CMS) Transforming Episode Accountability Model (TEAM)**, which begins January 1, 2026.
 
