@@ -42,4 +42,6 @@ st.markdown(
 # ── Sidebar track selector ───────────────────────────────────────────────────
 track = st.sidebar.radio(
     "TEAM participation track",
-    ("Track 1 – Upside on
+    ["Track 1 - Upside only", "Track 2 - Lower risk", "Track 3 - Full risk"],
+    index=0,
+)
