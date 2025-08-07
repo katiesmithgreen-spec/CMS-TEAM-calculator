@@ -4,4 +4,4 @@ base="light"                # “dark” also available
 primaryColor="#5842ff"      # brand purple
 secondaryBackground="#ffffff"
 textColor="#010203"
-font="sans serif"           # "serif" or "monospace" if you prefer
+font="sans serif"          
