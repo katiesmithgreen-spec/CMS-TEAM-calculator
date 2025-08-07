@@ -13,27 +13,7 @@ st.set_page_config(
 
 st.markdown(
     f"""
-    <style>
-      /* Brand headings & buttons */
-      h1, h2 {{ color:{PRIMARY_COLOR}; }}
-      div.stButton>button:first-child {{
-          background-color:{BUTTON_COLOR}; border-color:{BUTTON_COLOR}; color:#fff;
-      }}
-      div.stButton>button:hover {{
-          background-color:{PRIMARY_COLOR}; border-color:{PRIMARY_COLOR};
-      }}
-      /* Slider thumb & rail */
-      div[role='slider']>div {{ background-color:{PRIMARY_COLOR}!important; }}
-      
-      /* Slider bubble (value label) → white bg, near-black text */
-      div[data-testid='stThumbValue'] {{
-          background:#ffffff!important; color:#010203!important;
-          box-shadow:none!important; border:none!important;
-      }}
-      /* Results area: inherit app font, uniform color */
-      .results * {{ font-family:inherit!important; color:#010203!important; }}
-      .results strong {{ font-weight:600!important; }}
-    </style>
+   
     """,
     unsafe_allow_html=True,
 )
