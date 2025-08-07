@@ -36,7 +36,7 @@ div.stButton > button:hover {{
 }}
 /* Slider rail accent */
 div[role='slider'] > div {{
-    background-color: {PRIMARY_COLOR} !important;
+
 }}
 /* --- Slider value bubble -------------------------------------------------- */
 div[data-testid='stThumbValue'] {{
