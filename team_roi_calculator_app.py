@@ -36,9 +36,9 @@ PROCEDURE_META = {
 
 # Pre-compute implicit cost-reduction % for each procedure
 for m in PROCEDURE_META.values():
-    snf_saved   = m["snf_util"] ** SNF_LOS_DAYS ** SNF_DAILY_COST
+    snf_saved   = m["snf_util"] * SNF_LOS_DAYS * SNF_DAILY_COST
     net_saving  = snf_saved - HHA_EXTRA_COST - CH_COST_EPISODE
-    m["savings_pct"] = round(net_saving / m["baseline"] ** 100, 1)
+    m["savings_pct"] = round(net_saving / m["baseline"] * 100, 1)
 
 # ───────────────────────────────────── UI ─────────────────────────────────────
 st.title("CMS TEAM ROI Calculator – Current Health Edition")
