@@ -48,6 +48,14 @@ div[data-testid='stSlider'] span {{
 .results p, .results h3 {{
     color: #010203 !important;
     font-weight: 600;
+    /***** Slider value bubble fix *****/
+div[data-testid="stSlider"] span:not(:nth-of-type(1)) {
+    background: #ffffff !important;   /* transparent (white) */
+    color: #010203 !important;        /* near-black text */
+    box-shadow: none !important;      /* remove outline */
+    border: none !important;
+}
+
 }}
 </style>
 """, unsafe_allow_html=True)
