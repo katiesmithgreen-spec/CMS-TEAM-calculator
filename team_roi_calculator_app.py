@@ -41,7 +41,7 @@ div[role='slider'] > div {{
 /* --- Slider value bubble -------------------------------------------------- */
 div[data-testid='stThumbValue'] {{
     background: #ffffff !important;  /* transparent/white bubble */
-    color:  #010203 !important;      /* near‑black text */
+    color:  #5842ff !important;      /* near‑black text */
     box-shadow: none !important;
     border: none !important;
 }}
