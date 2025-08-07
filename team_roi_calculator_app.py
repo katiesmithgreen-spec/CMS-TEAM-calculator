@@ -20,10 +20,11 @@ st.set_page_config(
 # --------------------------
 st.markdown(f"""
 <style>
-/* Brand accents */
+/* Brand typography */
 h1, h2 {{
     color: {PRIMARY_COLOR};
 }}
+/* Buttons */
 div.stButton > button:first-child {{
     background-color: {BUTTON_COLOR};
     border-color: {BUTTON_COLOR};
@@ -33,19 +34,19 @@ div.stButton > button:hover {{
     background-color: {PRIMARY_COLOR};
     border-color: {PRIMARY_COLOR};
 }}
-/* Slider thumb & track */
+/* Slider thumb & track accent */
 div[role='slider'] > div {{
     background-color: {PRIMARY_COLOR} !important;
 }}
-/* --- Slider value label: black text, no bubble --- */
+/* Slider value label: transparent bg & custom text colour */
 div[data-testid='stSlider'] span {{
-    background: transparent !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #010203 !important;
     box-shadow: none !important;
 }}
-/* Results section: standardize font colour & weight */
+/* Results text styling */
 .results p, .results h3 {{
-    color: black !important;
+    color: #010203 !important;
     font-weight: 600;
 }}
 </style>
@@ -68,6 +69,7 @@ PROCEDURE_META = {
     "Major bowel procedure":             {"baseline": 35_000, "snf_util": 0.25},
 }
 
+# Pre‑compute savings %
 for meta in PROCEDURE_META.values():
     snf_save = meta["snf_util"] * SNF_LOS_DAYS * SNF_DAILY_COST
     net_savings = snf_save - HHA_EXTRA_COST - CH_COST_EPISODE
@@ -79,11 +81,12 @@ for meta in PROCEDURE_META.values():
 st.title("CMS TEAM ROI Calculator – Current Health Edition")
 
 st.markdown(
-    f"""Enter your annual episode volumes. SNF utilisation rates and costs are pre‑filled from national data.
-* SNF daily cost **${SNF_DAILY_COST:,}**, LOS **{SNF_LOS_DAYS:.1f} d**
+    f"""Enter annual episode volumes. Assumptions:
+
+* SNF daily cost **${SNF_DAILY_COST:,}**, LOS **{SNF_LOS_DAYS:.1f} d**
 * Home‑health delta +${HHA_EXTRA_COST}
-* Current Health cost **${CH_COST_EPISODE:,}** / episode
-* Quality boost **+{CH_QUALITY_PPT:.1f} pp**""")
+* Current Health cost **${CH_COST_EPISODE:,}** / episode
+* Quality boost **+{CH_QUALITY_PPT:.1f} pp**""")
 
 track = st.sidebar.selectbox(
     "TEAM Participation Track",
@@ -91,7 +94,7 @@ track = st.sidebar.selectbox(
     index=0,
 )
 
-st.sidebar.caption("Financial assumptions baked into the model.")
+st.sidebar.caption("Financial assumptions are fixed; edit code to change.")
 
 st.subheader("Annual Episode Volumes")
 
@@ -101,7 +104,7 @@ total_volume = 0
 for proc, meta in PROCEDURE_META.items():
     with st.container(border=True):
         st.markdown(f"**{proc}**")
-        st.caption(f"Bundled payment ${meta['baseline']:,}  •  SNF use {int(meta['snf_util']*100)}% × {SNF_LOS_DAYS:.1f} d")
+        st.caption(f"Bundled payment ${meta['baseline']:,}  •  SNF use {int(meta['snf_util']*100)}% × {SNF_LOS_DAYS:.1f} d")
         vol = st.slider(
             "Volume",
             min_value=0,
@@ -138,16 +141,19 @@ impl_cost_total = total_volume * CH_COST_EPISODE
 # -------------------------
 # Results
 # -------------------------
-with st.container(className="results"):
-    st.markdown("### Results")
+with st.container():
+    st.markdown('<div class="results">', unsafe_allow_html=True)
+
     total_rec = df["Quality-adjusted reconciliation"].sum()
     net_impact = total_rec - impl_cost_total
     roi_pct = (net_impact / impl_cost_total * 100) if impl_cost_total else 0
 
-    st.markdown(f"**Reconciliation payment:** ${total_rec:,.0f}")
-    st.markdown(f"**Current Health program cost:** ${impl_cost_total:,.0f}  ({total_volume} episodes × ${CH_COST_EPISODE:,})")
-    st.markdown(f"**Net impact:** ${net_impact:,.0f}")
-    st.markdown(f"**ROI:** {roi_pct:,.1f}%")
+    st.markdown(f"### Reconciliation payment: **${total_rec:,.0f}**")
+    st.markdown(f"### Current Health program cost: **${impl_cost_total:,.0f}**  ({total_volume} episodes × ${CH_COST_EPISODE:,})")
+    st.markdown(f"### Net impact: **${net_impact:,.0f}**")
+    st.markdown(f"### ROI: **{roi_pct:,.1f}%**")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with st.expander("Detailed table ▼"):
     st.dataframe(df.style.format({
