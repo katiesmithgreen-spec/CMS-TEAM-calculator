@@ -16,46 +16,39 @@ st.set_page_config(
 )
 
 # --------------------------
-# Custom CSS
+# Custom CSS (slider bubble fix & brand accents)
 # --------------------------
 st.markdown(f"""
 <style>
-/* Brand typography */
+/* Headings in brand colour */
 h1, h2 {{
     color: {PRIMARY_COLOR};
 }}
-/* Buttons */
+/* Button styling */
 div.stButton > button:first-child {{
     background-color: {BUTTON_COLOR};
     border-color: {BUTTON_COLOR};
-    color: white;
+    color: #ffffff;
 }}
 div.stButton > button:hover {{
     background-color: {PRIMARY_COLOR};
     border-color: {PRIMARY_COLOR};
 }}
-/* Slider thumb & track accent */
+/* Slider rail accent */
 div[role='slider'] > div {{
     background-color: {PRIMARY_COLOR} !important;
 }}
-/* Slider value label: transparent bg & custom text colour */
-div[data-testid='stSlider'] span {{
-    background: #ffffff !important;
-    color: #010203 !important;
+/* --- Slider value bubble -------------------------------------------------- */
+div[data-testid='stThumbValue'] {{
+    background: #ffffff !important;  /* transparent/white bubble */
+    color:  #010203 !important;      /* near‑black text */
     box-shadow: none !important;
+    border: none !important;
 }}
-/* Results text styling */
+/* Results text */
 .results p, .results h3 {{
     color: #010203 !important;
     font-weight: 600;
-    /***** Slider value bubble fix *****/
-div[data-testid="stSlider"] span:not(:nth-of-type(1)) {
-    background: #ffffff !important;   /* transparent (white) */
-    color: #010203 !important;        /* near-black text */
-    box-shadow: none !important;      /* remove outline */
-    border: none !important;
-}
-
 }}
 </style>
 """, unsafe_allow_html=True)
@@ -68,7 +61,7 @@ CH_QUALITY_PPT     = 0.3
 CH_COST_EPISODE    = 1_000
 HHA_EXTRA_COST     = 200
 SNF_DAILY_COST     = 305
-SNF_LOS_DAYS       = (22.1 + 30.8) / 2
+SNF_LOS_DAYS       = (22.1 + 30.8) / 2  # midpoint ≈ 26.5 days
 
 PROCEDURE_META = {
     "Lower extremity joint replacement": {"baseline": 26_500, "snf_util": 0.45},
@@ -77,33 +70,38 @@ PROCEDURE_META = {
     "Major bowel procedure":             {"baseline": 35_000, "snf_util": 0.25},
 }
 
-# Pre‑compute savings %
+# Pre‑compute cost‑reduction % for each procedure
 for meta in PROCEDURE_META.values():
-    snf_save = meta["snf_util"] * SNF_LOS_DAYS * SNF_DAILY_COST
-    net_savings = snf_save - HHA_EXTRA_COST - CH_COST_EPISODE
+    snf_savings = meta["snf_util"] * SNF_LOS_DAYS * SNF_DAILY_COST
+    net_savings = snf_savings - HHA_EXTRA_COST - CH_COST_EPISODE
     meta["savings_pct"] = round(net_savings / meta["baseline"] * 100, 1)
 
 # --------------------------
-# UI
+# Header
 # --------------------------
 st.title("CMS TEAM ROI Calculator – Current Health Edition")
 
 st.markdown(
-    f"""Enter annual episode volumes. Assumptions:
+    f"""Enter annual episode volumes. Assumptions baked in:
 
-* SNF daily cost **${SNF_DAILY_COST:,}**, LOS **{SNF_LOS_DAYS:.1f} d**
+* SNF daily cost **${SNF_DAILY_COST:,}**, LOS **{SNF_LOS_DAYS:.1f} days**
 * Home‑health delta +${HHA_EXTRA_COST}
-* Current Health cost **${CH_COST_EPISODE:,}** / episode
-* Quality boost **+{CH_QUALITY_PPT:.1f} pp**""")
+* Current Health cost **${CH_COST_EPISODE:,}** per episode
+* Quality boost **+{CH_QUALITY_PPT:.1f} pp**""")
 
+# ----------------------------
+# Sidebar – risk track
+# ----------------------------
 track = st.sidebar.selectbox(
     "TEAM Participation Track",
-    ["Track 1 – Upside only", "Track 2 – Lower risk", "Track 3 – Full risk"],
+    ("Track 1 – Upside only", "Track 2 – Lower risk", "Track 3 – Full risk"),
     index=0,
 )
+st.sidebar.caption("Financial assumptions are fixed in code.")
 
-st.sidebar.caption("Financial assumptions are fixed; edit code to change.")
-
+# ------------------------------------
+# Volume sliders
+# ------------------------------------
 st.subheader("Annual Episode Volumes")
 
 rows = []
@@ -112,7 +110,10 @@ total_volume = 0
 for proc, meta in PROCEDURE_META.items():
     with st.container(border=True):
         st.markdown(f"**{proc}**")
-        st.caption(f"Bundled payment ${meta['baseline']:,}  •  SNF use {int(meta['snf_util']*100)}% × {SNF_LOS_DAYS:.1f} d")
+        st.caption(
+            f"Bundled payment ${meta['baseline']:,} • "
+            f"SNF use {int(meta['snf_util']*100)}% × {SNF_LOS_DAYS:.1f} d"
+        )
         vol = st.slider(
             "Volume",
             min_value=0,
@@ -157,19 +158,23 @@ with st.container():
     roi_pct = (net_impact / impl_cost_total * 100) if impl_cost_total else 0
 
     st.markdown(f"### Reconciliation payment: **${total_rec:,.0f}**")
-    st.markdown(f"### Current Health program cost: **${impl_cost_total:,.0f}**  ({total_volume} episodes × ${CH_COST_EPISODE:,})")
+    st.markdown(f"### Current Health program cost: **${impl_cost_total:,.0f}** "
+                f"({total_volume} episodes × ${CH_COST_EPISODE:,})")
     st.markdown(f"### Net impact: **${net_impact:,.0f}**")
     st.markdown(f"### ROI: **{roi_pct:,.1f}%**")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
 with st.expander("Detailed table ▼"):
-    st.dataframe(df.style.format({
-        "Baseline cost": "${:,.0f}",
-        "Target price": "${:,.0f}",
-        "Expected cost": "${:,.0f}",
-        "Reconciliation $/episode": "${:,.0f}",
-        "Annual reconciliation": "${:,.0f}",
-        "Quality-adjusted reconciliation": "${:,.0f}",
-        "Cost-reduction %": "{:,.1f}%",
-    }), use_container_width=True)
+    st.dataframe(
+        df.style.format({
+            "Baseline cost": "${:,.0f}",
+            "Target price": "${:,.0f}",
+            "Expected cost": "${:,.0f}",
+            "Reconciliation $/episode": "${:,.0f}",
+            "Annual reconciliation": "${:,.0f}",
+            "Quality-adjusted reconciliation": "${:,.0f}",
+            "Cost-reduction %": "{:,.1f}%",
+        }),
+        use_container_width=True
+    )
