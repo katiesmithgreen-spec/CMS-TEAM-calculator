@@ -2,138 +2,107 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="CMS TEAM ROI Calculator", layout="centered")
+# --------------------------
+# Fixed Current Health constants
+# --------------------------
+CMS_DISCOUNT_PCT = 3.0       # Target-price haircut applied by CMS
+CH_SAVINGS_PCT   = 6.0       # Extra cost‑reduction percentage points per episode
+CH_QUALITY_PPT   = 0.3       # Quality score boost (percentage‑points)
+CH_COST_EPISODE  = 1_000     # Current Health program cost per treated episode (USD)
 
-st.title("CMS TEAM Model ROI Calculator (2026–2030)")
+st.set_page_config(page_title="CMS TEAM ROI Calculator – Current Health", layout="centered")
+
+st.title("CMS TEAM Model ROI Calculator (2026–2030) – Current Health Edition")
 
 st.markdown(
-    """This interactive tool helps hospitals estimate the *financial return on investment (ROI)* from participating in the **Centers for Medicare & Medicaid Services (CMS) Transforming Episode Accountability Model (TEAM)**, which begins January 1, 2026.
+    """Enter your hospital’s **annual episode volumes**. The calculator applies
+fixed Current Health assumptions:
 
-**How it works**  
-▪ **You provide** your current episode volumes, baseline costs, expected cost‑reduction percentages, and global assumptions such as the CMS discount factor, quality adjustment, and annual implementation cost.  
-▪ **The calculator estimates** the annual reconciliation payment (or repayment) under TEAM and computes a simple ROI:  
-`ROI = (Annual reconciliation payment – Implementation cost) ÷ Implementation cost`.
+* **–{CH_SAVINGS_PCT:.0f}%** incremental episode‑cost savings  
+* **+{CH_QUALITY_PPT:.1f} pp** quality‑score boost  
+* **${CH_COST_EPISODE:,}** program cost per treated episode  
 
-> *Disclaimer – This calculator is for planning purposes only. It uses simplified assumptions and does **not** model every nuance of TEAM (e.g., cap thresholds, stop‑loss / stop‑gain, high‑cost outlier payments). Replace the default assumptions with your own hospital’s data and the official CMS target pricing files once released.*"""
-)
+Baseline costs use illustrative national averages; adjust in code when CMS releases official target‑price files.
+""")
 
 # ----------------------------
-# Sidebar – global assumptions
+# Sidebar – select risk track
 # ----------------------------
-
-st.sidebar.header("Global Assumptions")
-
 track = st.sidebar.selectbox(
     "TEAM Participation Track",
     [
-        "Track 1 – No downside risk in PY1 (default)",
-        "Track 2 – Lower risk / reward (PY2‑PY5)",
-        "Track 3 – Full risk / reward (PY1‑PY5)",
+        "Track 1 – Upside‑only in PY1 (default)",
+        "Track 2 – Lower symmetric risk/reward",
+        "Track 3 – Full symmetric risk/reward",
     ],
-    help="TEAM offers three graduated risk tracks. This calculator assumes upside‑only in PY1 for Track 1 and symmetric risk for Tracks 2 & 3. Adjust additional modeling offline if needed.",
+    index=0,
+    help="Track affects downside liability. This calculator models *upside only*; add downside logic later for Tracks 2/3.",
 )
 
-discount_pct = st.sidebar.number_input(
-    "CMS discount applied to target price (%)",
-    min_value=0.0,
-    max_value=10.0,
-    value=3.0,
-    step=0.1,
-    help="CMS typically discounts historical average spend to set the target price (3 % is used in many prior bundled models).",
-)
-
-quality_adj_pct = st.sidebar.number_input(
-    "Quality performance adjustment (%)",
-    min_value=-5.0,
-    max_value=5.0,
-    value=0.0,
-    step=0.1,
-    help="Positive value boosts reconciliation; negative reduces it. Range here mirrors ±5 percentage points cap in prior CMS models.",
-)
-
-impl_cost_total = st.sidebar.number_input(
-    "Total annual implementation cost ($)",
-    min_value=0.0,
-    value=250_000.0,
-    step=10_000.0,
-    help="Include staffing, care‑redesign programs, IT, analytics, and vendor fees.",
-)
-
-st.sidebar.markdown("---")
+st.sidebar.caption("Other pricing factors (CMS discount, quality boost, program cost) are fixed for simplicity.")
 
 # ------------------------------------
-# Main area – episode‑level assumptions
+# Main area – episode volumes
 # ------------------------------------
-
-st.subheader("Episode Inputs (per performance year)")
+st.subheader("Annual Episode Volumes")
 
 DEFAULT_EPISODES = {
-    "Lower extremity joint replacement": {"volume": 150, "baseline_cost": 26_500},
-    "Hip/femur fracture": {"volume": 80, "baseline_cost": 29_500},
-    "Spinal fusion": {"volume": 40, "baseline_cost": 42_000},
-    "Coronary artery bypass graft": {"volume": 30, "baseline_cost": 48_000},
-    "Major bowel procedure": {"volume": 25, "baseline_cost": 35_000},
+    "Lower extremity joint replacement": 26_500,
+    "Hip/femur fracture": 29_500,
+    "Spinal fusion": 42_000,
+    "Coronary artery bypass graft": 48_000,
+    "Major bowel procedure": 35_000,
 }
 
 rows = []
-for proc, defaults in DEFAULT_EPISODES.items():
-    with st.expander(proc, expanded=False):
-        vol = st.number_input(
-            f"Annual volume – {proc}",
-            min_value=0,
-            value=defaults["volume"],
-            step=1,
-            key=f"vol_{proc}",
-        )
-        base_cost = st.number_input(
-            f"Baseline average cost per episode – {proc} ($)",
-            min_value=0.0,
-            value=float(defaults["baseline_cost"]),  # cast to float so all numeric args are same type
-            step=500.0,
-            key=f"base_{proc}",
-        )
-        reduction = st.slider(
-            f"Expected % cost reduction for {proc}",
-            min_value=0.0,
-            max_value=30.0,
-            value=5.0,
-            step=0.5,
-            help="Percent decrease in *total episode spend* due to initiatives such as care coordination, post‑acute network management, etc.",
-            key=f"red_{proc}",
-        )
-        rows.append(
-            {
-                "Procedure": proc,
-                "Volume": vol,
-                "Baseline cost": base_cost,
-                "Cost‑reduction %": reduction,
-            }
-        )
+total_volume = 0
 
-if not rows:
-    st.warning("Add at least one episode to calculate ROI.")
+for proc, baseline_cost in DEFAULT_EPISODES.items():
+    vol = st.number_input(
+        f"{proc} – annual volume",
+        min_value=0,
+        value=0,
+        step=1,
+        key=f"vol_{proc}",
+    )
+    if vol > 0:
+        total_volume += vol
+    rows.append(
+        {
+            "Procedure": proc,
+            "Volume": vol,
+            "Baseline cost": baseline_cost,
+            "Cost-reduction %": CH_SAVINGS_PCT,  # fixed savings from CH
+        }
+    )
+
+if total_volume == 0:
+    st.warning("Enter at least one non‑zero volume to calculate ROI.")
     st.stop()
 
 # -------------------------
 # Dataframe & calculations
 # -------------------------
-
 df = pd.DataFrame(rows)
 
-df["Target price"] = df["Baseline cost"] * (1 - discount_pct / 100)
-df["Expected cost"] = df["Baseline cost"] * (1 - df["Cost‑reduction %"] / 100)
+df["Target price"] = df["Baseline cost"] * (1 - CMS_DISCOUNT_PCT / 100)
+df["Expected cost"] = df["Baseline cost"] * (1 - df["Cost-reduction %"] / 100)
 df["Reconciliation $/episode"] = df["Target price"] - df["Expected cost"]
 df["Annual reconciliation"] = df["Reconciliation $/episode"] * df["Volume"]
 
+# Apply fixed quality boost
+quality_adj_pct = CH_QUALITY_PPT
 df["Quality‑adjusted reconciliation"] = df["Annual reconciliation"] * (1 + quality_adj_pct / 100)
+
+# Program cost
+impl_cost_total = total_volume * CH_COST_EPISODE
 
 # -------------------------
 # Results output
 # -------------------------
-
 st.subheader("Results")
 
-fmt = {
+fmt_cols = {
     "Baseline cost": "${:,.0f}",
     "Target price": "${:,.0f}",
     "Expected cost": "${:,.0f}",
@@ -142,15 +111,20 @@ fmt = {
     "Quality‑adjusted reconciliation": "${:,.0f}",
 }
 
-st.dataframe(df.style.format(fmt))
+st.dataframe(df.style.format(fmt_cols))
 
 total_rec = df["Quality‑adjusted reconciliation"].sum()
 net_impact = total_rec - impl_cost_total
 roi_pct = (net_impact / impl_cost_total * 100) if impl_cost_total else 0
 
 st.markdown(f"**Total expected annual reconciliation payment:** ${total_rec:,.0f}")
-st.markdown(f"**Annual implementation cost:** ${impl_cost_total:,.0f}")
+st.markdown(f"**Current Health program cost:** ${impl_cost_total:,.0f}  
+"
+            f"(*{total_volume} episodes × ${CH_COST_EPISODE:,} per episode*)")
 st.markdown(f"**Net annual impact:** ${net_impact:,.0f}")
 st.markdown(f"**Estimated ROI:** {roi_pct:,.1f}%")
 
-st.caption("ROI assumes upside‑only reconciliation. For Tracks 2 & 3 or post‑glide‑path years, model potential downside losses separately.")
+st.caption(
+    "ROI reflects upside‑only reconciliation under the selected track. "
+    "Add downside‑risk modeling for a full pro‑forma."
+)
